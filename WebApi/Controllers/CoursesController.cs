@@ -1,4 +1,4 @@
-
+using Microsoft.AspNetCore.Http;
 
 namespace WebApi.Controllers;
 
@@ -14,7 +14,8 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses
-    [HttpGet]
+    [HttpGet(Name = "取得課程Async")]
+    [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<Course>>> GetCourses(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
@@ -27,10 +28,16 @@ public class CoursesController : ControllerBase
         var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
 
         var pagedCourses = await courses
+            .Select(c => new CourseRead
+            {
+                CourseId = c.CourseId,
+                Credits = c.Credits,
+                Title = c.Title!
+            })
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize).ToListAsync();
         
-        return Ok(new
+        return Ok(new PageCourse
         {
             TotalPages = totalPages,
             TotalRecords = totalRecords,
@@ -39,8 +46,11 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses/5
-    [HttpGet("{id}")]
-    public async Task<ActionResult<Course>> GetCourse(int id)
+    [HttpGet("{id}", Name = "取得指定課程Async")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesDefaultResponseType]
+    public async Task<ActionResult<CourseRead>> GetCourse(int id)
     {
         var course = await _context.Courses.FindAsync(id);
 
@@ -49,11 +59,19 @@ public class CoursesController : ControllerBase
             return NotFound();
         }
 
-        return course;
+        return new CourseRead
+        {
+            CourseId = course.CourseId,
+            Credits = course.Credits,
+            Title = course.Title!
+        };
     }
 
     // GET: api/Courses/5/Depart
     [HttpGet("{id}/Depart", Name = "GetCourseWithDepartment")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesDefaultResponseType]
     public async Task<ActionResult<Course>> GetCourseWithDepartment(int id)
     {
         var course = await _context.Courses.FindAsync(id);
@@ -79,6 +97,10 @@ public class CoursesController : ControllerBase
     // PUT: api/Courses/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesDefaultResponseType]
     public async Task<IActionResult> PutCourse(int id, CourseUpdate course)
     {
         if (id != course.CourseId)
@@ -126,6 +148,8 @@ public class CoursesController : ControllerBase
     // POST: api/Courses
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesDefaultResponseType]
     public async Task<ActionResult<Course>> PostCourse(CourseCreate courseToCreate)
     {
         var course = new Course
@@ -148,6 +172,9 @@ public class CoursesController : ControllerBase
 
     // DELETE: api/Courses/5
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesDefaultResponseType]
     public async Task<IActionResult> DeleteCourse(int id)
     {
         var course = await _context.Courses.FindAsync(id);
@@ -163,6 +190,8 @@ public class CoursesController : ControllerBase
     }
 
     [HttpPost("BatchUpdateCredits", Name = "PostBatchUpdateCredits")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesDefaultResponseType]
     public async Task<IActionResult> PostBatchUpdateCredits()
     {
         await _context.Courses.ExecuteUpdateAsync(setter => 
