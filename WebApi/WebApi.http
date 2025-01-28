@@ -1,0 +1,60 @@
+@WebApi_HostAddress = http://localhost:5268
+
+GET {{WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+GET {{WebApi_HostAddress}}/api/courses/
+Accept: application/json
+
+###
+
+GET {{WebApi_HostAddress}}/api/courses?pageIndex=1&pageSize=5
+Accept: application/json
+
+###
+
+GET {{WebApi_HostAddress}}/api/courses/1
+Accept: application/json
+
+###
+
+PUT {{WebApi_HostAddress}}/api/courses/1
+Accept: application/json
+Content-Type: application/json
+
+{
+    "CourseId": 1,
+    "title": "Entity Framework Core 6 開發實戰",
+    "credits": 4
+}
+
+###
+
+POST {{WebApi_HostAddress}}/api/courses
+Accept: application/json
+Content-Type: application/json
+
+{
+    "courseId": 1,
+    "title": "Asp Net Core 8 Day 6",
+    "credits": 4
+}
+
+###
+
+DELETE  {{WebApi_HostAddress}}/api/courses/19
+Accept: application/json
+
+
+###
+
+GET {{WebApi_HostAddress}}/api/Courses/5/Depart
+Accept: application/json
+
+
+###
+
+POST {{WebApi_HostAddress}}/api/Courses/BatchUpdateCredits
+Accept: application/json
