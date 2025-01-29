@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Http;
-
 namespace WebApi.Controllers;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/[controller]")]
 public class CoursesController : ControllerBase
 {
     private readonly ContosoUniversityContext _context;
@@ -14,9 +12,9 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses
-    [HttpGet(Name = "取得課程Async")]
+    [HttpGet(Name = "GetCoursesAsync")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<Course>>> GetCourses(
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCourses(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
         int pageSize = 10)
@@ -46,10 +44,10 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses/5
-    [HttpGet("{id}", Name = "取得指定課程Async")]
+    [HttpGet("{id}", Name = "GetCourseByIdAsync")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesDefaultResponseType]
+    [ProducesResponseType<CourseRead>(StatusCodes.Status200OK)]
     public async Task<ActionResult<CourseRead>> GetCourse(int id)
     {
         var course = await _context.Courses.FindAsync(id);
@@ -68,11 +66,11 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses/5/Depart
-    [HttpGet("{id}/Depart", Name = "GetCourseWithDepartment")]
+    [HttpGet("{id}/Depart", Name = "GetCourseWithDepartmentAsync")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesDefaultResponseType]
-    public async Task<ActionResult<Course>> GetCourseWithDepartment(int id)
+    [ProducesResponseType<CourseWithDepartmentRead>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<CourseWithDepartmentRead>> GetCourseWithDepartment(int id)
     {
         var course = await _context.Courses.FindAsync(id);
 
@@ -96,7 +94,7 @@ public class CoursesController : ControllerBase
 
     // PUT: api/Courses/5
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPut("{id}")]
+    [HttpPut("{id}", Name = "PutCourseAsync")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -147,10 +145,10 @@ public class CoursesController : ControllerBase
 
     // POST: api/Courses
     // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-    [HttpPost]
+    [HttpPost(Name = "PostCourseAsync")]
     [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesDefaultResponseType]
-    public async Task<ActionResult<Course>> PostCourse(CourseCreate courseToCreate)
+    [ProducesResponseType<CourseCreate>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CourseCreate>> PostCourse(CourseCreate courseToCreate)
     {
         var course = new Course
         {
@@ -161,17 +159,16 @@ public class CoursesController : ControllerBase
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetCourse", new { id = course.CourseId }, new Course
+        return CreatedAtAction("GetCourse", new { id = course.CourseId }, new CourseCreate
         {
             CourseId = course.CourseId,
             Credits = course.Credits,
             Title = course.Title,
-            DepartmentId = course.DepartmentId
         });
     }
 
     // DELETE: api/Courses/5
-    [HttpDelete("{id}")]
+    [HttpDelete("{id}", Name = "DeleteCourseAsync")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesDefaultResponseType]
@@ -189,7 +186,7 @@ public class CoursesController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("BatchUpdateCredits", Name = "PostBatchUpdateCredits")]
+    [HttpPost("BatchUpdateCredits", Name = "PostBatchUpdateCreditsAsync")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesDefaultResponseType]
     public async Task<IActionResult> PostBatchUpdateCredits()
