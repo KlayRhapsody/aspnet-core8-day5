@@ -39,9 +39,9 @@ Accept: application/json
 Content-Type: application/json
 
 {
-    "courseId": 1,
+    "courseId": 0,
     "title": "Asp Net Core 8 Day 6",
-    "credits": 4
+    "credits": 40
 }
 
 ###

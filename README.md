@@ -322,3 +322,206 @@ return CreatedAtAction(nameof(Get),
 4. 有路由參數，且無「套用限定詞」
 5. 有「萬用字元參數（Wildcard Parameter）」且有「套用限定詞」
 6. 有「萬用字元參數」但無「套用限定詞」
+
+
+### **套用 `[ApiController]` 屬性**
+
+- 必須使用屬性路由 (Attribute Routing)
+
+- 只要發生模型驗證失敗，就會自動回應 HTTP 400 (Bad Request)
+  - 預設以 `ValidationProblemDetails` 型別回應
+  - 預設 `BadRequest` 回應
+
+- 自動套用模型繫結的預設規則
+  - 複雜型別 預設就會自動套用 `[FromBody]` 屬性
+  - 參數型別 如果是 `IFormFile` 或 `IFormFileCollection` 的話
+    - 會自動套用 `[FromForm]` 屬性，且該屬性也只能用在這兩個型別
+  - 簡單模型或任何其他參數，全部都會自動套用 `[FromQuery]` 屬性
+    - 例如「路由參數」預設會自動套用 `[FromQuery]`
+
+
+### **`[FromBody]` 屬性**
+
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 預設只會套用「複雜模型」
+
+- 主要特性
+  - 只會從 Request Body 取值
+
+- 應用情境
+  - 通常用在「簡單模型」的資料類型（`int`、`string`、`DateTime`、...）
+  - 當簡單模型內容過大，超出 URL 可允許的長度限制，才會特別這樣用
+
+
+### **`[FromForm]` 屬性**
+
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 預設會套用在 `IFormFile` 或 `IFormFileCollection` 複雜模型上
+
+- 主要特性
+  - 只會從 Request Body 取值
+
+- 應用情境
+  - 雖然也可以用來繫結表單 `POST` 過來的欄位，但通常不會這麼用
+  - 實務上大多不會特別套用 `[FromForm]` 屬性，因為在有套用 `[ApiController]` 的控制器 (Controller)，`IFormFile` 或 `IFormFileCollection` 預設就已經會套用上去！
+
+
+### `[FromQuery]` 屬性
+
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 預設只會套用「簡單模型」
+
+- 主要特性
+  - 只會從 Query String 取值
+
+- 應用情境
+  - 通常用在「複雜模型」的資料類型（使用者自定義型別）
+  - 當參數過多、資料量不大的情況下，才會特別這樣用
+
+範例
+
+```http
+GET https://localhost:5001/api/values?Latitude=25.0436381&Longitude=121.5234672
+```
+
+
+```csharp
+public class GeoPoint
+{
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+}
+
+[Route("api/[controller]")]
+[ApiController]
+public class ValuesController : ControllerBase
+{
+    [HttpGet]
+    public ActionResult<GeoPoint> GetAll([FromQuery] GeoPoint p)
+    {
+        return p;
+    }
+}
+```
+
+
+### `[FromRoute]` 屬性
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 預設只會套用「簡單模型」
+
+- 主要特性
+  - 只會從 Route template 取值（Path Info 部分）
+
+- 應用情境
+  - 通常用在「簡單模型」的資料類型
+  - 當想直接繫結已知的路由參數，才會特別這樣用
+  - 實務上大多不會特別套用 `[FromRoute]` 屬性，但可增加程式碼可讀性
+
+
+### **`[FromHeader]` 屬性**
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 無預設行為，必須套用此屬性才能取值
+
+- 主要特性
+  - 只會從 Request header 取值
+  - 只能套用「簡單模型」的資料類型
+
+- 應用情境
+  - 當 Web API 設計參數來自 Request header 傳遞時才會用上
+  - 宣告範例
+```csharp
+[FromHeader(Name = "X-ClientID")] string clientId
+```
+
+
+### **`[FromServices]` 屬性**
+- 在有套用 `[ApiController]` 的 Controller 情況下
+  - 無預設行為，必須套用此屬性才能取值
+
+- 主要特性
+  - 只會從 `IServiceCollection` 取值（從 DI 容器取得服務物件）
+
+- 應用情境
+  - 實務上大多不會特別套用 `[FromServices]` 屬性，而採用建構式注入
+  - 宣告範例
+```csharp
+[FromServices] IDateTime dt
+```
+
+
+### **DTO 驗證**
+
+當有定義 required 時，在做序列化、反序列時，若缺少該屬性，則會回應 400 Bad Request，而不會往下進入到模型驗證的部分
+
+```csharp
+public required string Title { get; set; }
+```
+
+錯誤訊息
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "$": [
+      "JSON deserialization for type 'WebApi.Models.Dtos.CourseCreate' was missing required properties including: 'title'."
+    ],
+    "courseToCreate": [
+      "The courseToCreate field is required."
+    ]
+  },
+  "traceId": "00-c6c0ac26f6f9f48c53417bfc8fb1efe8-07ff38f578cceb84-00"
+}
+```
+
+改為使用 Data Annotations 驗證
+
+```csharp
+[Required(ErrorMessage = "The Title field is required.")]
+public string Title { get; set; }
+```
+
+錯誤訊息
+
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "Title": [
+      "The Title field is required."
+    ]
+  },
+  "traceId": "00-cde3489cf40cfe1168d98b6a2bc74daa-e46d13872c34499d-00"
+}
+```
+
+DTO 類別可繼承 `IValidatableObject` 介面，並實作 `Validate` 方法，來自訂驗證邏輯
+
+```csharp
+public class CourseCreate : IValidatableObject
+{
+    public int CourseId { get; set; }
+
+    [Required(ErrorMessage = "The Title field is required.")]
+    public string Title { get; set; }
+
+    [Required(ErrorMessage = "The Credits field is required.")]
+    [Range(0, 5, ErrorMessage = "The Credits field must be between 0 and 5.")]
+    public int Credits { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (CourseId != 0)
+        {
+            yield return new ValidationResult("The CourseId field must required 0.", [nameof(CourseId)]);
+        }
+
+        yield return ValidationResult.Success!;
+    }
+}
+```
+
