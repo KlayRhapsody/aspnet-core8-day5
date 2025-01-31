@@ -1,7 +1,12 @@
+using Asp.Versioning;
+
 namespace WebApi.Controllers;
 
 [ApiController]
+// [Route("api/v{version:apiVersion}/[controller]")]
 [Route("api/[controller]")]
+[ApiVersion("1")]
+[ApiVersion("2")]
 public class CoursesController : ControllerBase
 {
     private readonly ContosoUniversityContext _context;
@@ -12,12 +17,46 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses
-    [HttpGet(Name = "GetCoursesAsync")]
+    [MapToApiVersion("1")]
+    [HttpGet(Name = "GetCoursesV1Async")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCourses(
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV1(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
         int pageSize = 10)
+    {
+        var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
+
+        var totalRecords = await courses.CountAsync();
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+
+        var pagedCourses = await courses
+            .Select(c => new CourseRead
+            {
+                CourseId = c.CourseId,
+                Credits = c.Credits,
+                Title = c.Title!
+            })
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize).ToListAsync();
+        
+        return Ok(new PageCourse
+        {
+            TotalPages = totalPages,
+            TotalRecords = totalRecords,
+            Data = pagedCourses
+        });
+    }
+
+    // GET: api/Courses
+    [MapToApiVersion("2")]
+    [HttpGet(Name = "GetCoursesV2Async")]
+    [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV2(
+        [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
+        int pageIndex = 1, 
+        int pageSize = 5)
     {
         var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
 

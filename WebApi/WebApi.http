@@ -5,8 +5,10 @@ Accept: application/json
 
 ###
 
-GET {{WebApi_HostAddress}}/api/courses/
+GET {{WebApi_HostAddress}}/api/courses
 Accept: application/json
+api-version: 2.0
+
 
 ###
 

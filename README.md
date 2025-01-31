@@ -118,3 +118,207 @@ dotnet openapi refresh -p {Client Project}.csproj http://localhost:{Port}/swagge
 ```
 
 解決方式，於請求參數型別和回應型別使用 DTO 替代實體物件
+
+
+### **當公司規定無法使用 `Post` 以外的動詞時，透過 `:update` 等方式來取代**
+
+這種用法通常被稱為「動詞後綴」或「動詞後綴模式」。這種模式在 RESTful API 設計中使用，以便在僅允許使用 POST 方法的情況下，仍能夠表達不同的操作（例如更新、刪除等）。
+
+```bash
+PUT {{HostDomain}}/api/courses/1
+
+# 調整為
+POST {{HostDomain}}/api/courses/1:Update
+```
+
+
+### **安不安全與 HTTP 動詞無關，動詞只是讓語意更清楚**
+
+開發者沒有資安意思才不安全
+
+早期有個 WebDAV 是一種基於 HTTP 協議的工具，可以用來新增、刪除、修改伺服器端的資料。IIS（Internet Information Services）曾經內建並預設啟用 WebDAV 功能，這確實可能會帶來安全風險，因為駭客可以利用這個功能來植入檔案。然而，HTTP 動詞本身並不是危險的，危險的是未經適當保護和配置的 WebDAV 功能。正確的安全配置和權限管理可以有效防止這類攻擊。
+
+
+### **以版本切分路由**
+
+安裝 NuGet 套件
+
+```bash
+# Microsoft.AspNetCore.Mvc.Versioning、Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer 套件為舊版
+dotnet add package Asp.Versioning.Http
+dotnet add package Asp.Versioning.Mvc.ApiExplorer
+```
+
+設定版本控制
+
+```csharp
+builder.Services.AddApiVersioning(option =>
+{
+    // 設定預設版本
+    option.DefaultApiVersion = new ApiVersion(1, 0);
+    // 當未指定版本時，將使用預設版本
+    option.AssumeDefaultVersionWhenUnspecified = true;
+    // 在回應中報告支援的 API 版本
+    option.ReportApiVersions = true;
+    // 設定 API 版本讀取器，並使用 Combine 方法來結合多個版本讀取器
+    // 使用 HTTP 標頭來讀取 API 版本
+    // 使用查詢字串來讀取 API 版本
+    // 使用 URL 段來讀取 API 版本
+    option.ApiVersionReader = ApiVersionReader.Combine(
+        new HeaderApiVersionReader("api-version"),
+        new QueryStringApiVersionReader("api-version"),
+        new UrlSegmentApiVersionReader());
+})
+.AddApiExplorer(option =>
+{
+    // 設定了 API 版本的群組名稱格式。這裡的值 "'v'VVV" 表示群組名稱將以字母 "v" 開頭，後面跟著版本號碼。VVV 是一個佔位符，代表版本號碼的格式。這樣的設定有助於在 API 文件中清晰地標示出不同版本的 API。
+    option.GroupNameFormat = "'v'VVV";
+    // URL 中會替換 API 版本號碼。這個選項允許在 API 路徑中直接包含版本資訊，使得 API 路徑更加直觀和易於理解。例如，如果 API 版本是 1.0，那麼 URL 可能會變成 /api/v1.0/ 這樣的格式
+    option.SubstituteApiVersionInUrl = true;
+});
+```
+
+使用版本控制
+
+```csharp
+[ApiController]
+// [Route("api/v{version:apiVersion}/[controller]")] // 此為 URL 包含版本號碼
+[Route("api/[controller]")]
+[ApiVersion("1")]
+[ApiVersion("2")]
+public class CoursesController : ControllerBase
+{
+    // GET: api/Courses
+    [MapToApiVersion("1")]
+    [HttpGet(Name = "GetCoursesV1Async")]
+    [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV1(
+        [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
+        int pageIndex = 1, 
+        int pageSize = 10)
+    {
+        var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
+
+        var totalRecords = await courses.CountAsync();
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+
+        var pagedCourses = await courses
+            .Select(c => new CourseRead
+            {
+                CourseId = c.CourseId,
+                Credits = c.Credits,
+                Title = c.Title!
+            })
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize).ToListAsync();
+        
+        return Ok(new PageCourse
+        {
+            TotalPages = totalPages,
+            TotalRecords = totalRecords,
+            Data = pagedCourses
+        });
+    }
+
+    // GET: api/Courses
+    [MapToApiVersion("2")]
+    [HttpGet(Name = "GetCoursesV2Async")]
+    [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV2(
+        [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
+        int pageIndex = 1, 
+        int pageSize = 5)
+    {
+        var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
+
+        var totalRecords = await courses.CountAsync();
+
+        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
+
+        var pagedCourses = await courses
+            .Select(c => new CourseRead
+            {
+                CourseId = c.CourseId,
+                Credits = c.Credits,
+                Title = c.Title!
+            })
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize).ToListAsync();
+        
+        return Ok(new PageCourse
+        {
+            TotalPages = totalPages,
+            TotalRecords = totalRecords,
+            Data = pagedCourses
+        });
+    }
+}
+```
+
+呼叫 API 時，可以透過 URL 段來指定版本號碼
+
+```bash
+# 不指定版本號碼則吃預設版本
+GET {{WebApi_HostAddress}}/api/courses
+Accept: application/json
+
+# 透過 Header 標頭來指定版本號碼
+GET {{WebApi_HostAddress}}/api/courses
+Accept: application/json
+api-version: 2.0
+
+# 透過 QueryString 來指定版本號碼
+GET {{WebApi_HostAddress}}/api/courses?api-version=2.0
+Accept: application/json
+
+# 回傳 Header 會帶有支援的版本號碼
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: application/json; charset=utf-8
+Date: Fri, 31 Jan 2025 07:03:34 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+api-supported-versions: 1, 2
+```
+
+### **`CreatedAtRoute` vs. `CreatedAtAction`**
+
+`CreatedAtRoute(nameof(GetBookById), ...)`：使用路由名稱來建立 Location 標頭，指向新創建的資源。
+
+`CreatedAtAction(nameof(Get), ...)`：使用控制器內的方法名稱來建立 Location 標頭。
+
+### **`CreatedAtRoute` 使用具名路由**
+```csharp
+return CreatedAtRoute(nameof(GetBookById),
+    new { id = product.ProductId },
+    book);
+```
+- **`CreatedAtRoute`** 會根據 `HttpGet("api/books/{id}", Name = nameof(GetBookById))` 指定的名稱 `GetBookById` 來匹配路由。
+- **優勢**：即使 `GetBookById` 的路由定義變更（例如 URL 改成 `v2/books/{id}`），只要名稱保持不變，這段程式碼仍然有效。
+
+### **`CreatedAtAction` 使用動作名稱**
+```csharp
+return CreatedAtAction(nameof(Get),
+    new { id = product.ProductId },
+    book);
+```
+- **`CreatedAtAction`** 會根據控制器內部的 `Get` 方法名稱來建立 URL。
+- **優勢**：不需要明確設定路由名稱，程式碼更加直觀。
+
+## **何時應該使用哪個？**
+| 方法 | 何時使用 | 優勢 |
+|------|----------|------|
+| `CreatedAtRoute` | **當你希望透過具名路由（route name）來確保路徑穩定時** | 即使方法名稱變更，`Name` 屬性不變，仍然可以匹配 |
+| `CreatedAtAction` | **當你只在當前控制器內使用方法名稱時** | 直接使用方法名稱，程式碼更簡潔，但若改變方法名稱則可能影響行為 |
+
+
+### **路由套用順序**
+
+1. 純字串、無參數、無萬用字元（Literal segments）
+2. 比對是否設定「路由順序 Order」
+    - 預設 Order=0，數字越小優先權越高
+3. 有路由參數，且有「套用限定詞」
+4. 有路由參數，且無「套用限定詞」
+5. 有「萬用字元參數（Wildcard Parameter）」且有「套用限定詞」
+6. 有「萬用字元參數」但無「套用限定詞」
