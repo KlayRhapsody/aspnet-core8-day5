@@ -10,7 +10,7 @@ var client = new WebApi(http);
 
 // // Console.WriteLine(course.Title);
 
-var courses = await client.GetCoursesAsync(1, 10);
+var courses = await client.GetCoursesV2Async(1, 10, "2.0", "2.0");
 
 Console.WriteLine($"TotalPages: {courses.TotalPages}, TotalRecords: {courses.TotalRecords}");
 foreach (var c in courses.Data)

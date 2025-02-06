@@ -5,8 +5,8 @@ namespace WebApi.Controllers;
 [ApiController]
 // [Route("api/v{version:apiVersion}/[controller]")]
 [Route("api/[controller]")]
-[ApiVersion("1")]
-[ApiVersion("2")]
+[ApiVersion("1.0")]
+[ApiVersion("2.0")]
 public class CoursesController : ControllerBase
 {
     private readonly ContosoUniversityContext _context;
@@ -17,10 +17,10 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses
-    [MapToApiVersion("1")]
     [HttpGet(Name = "GetCoursesV1Async")]
+    [MapToApiVersion("1.0")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV1(
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV1Async(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
         int pageSize = 10)
@@ -50,10 +50,10 @@ public class CoursesController : ControllerBase
     }
 
     // GET: api/Courses
-    [MapToApiVersion("2")]
     [HttpGet(Name = "GetCoursesV2Async")]
+    [MapToApiVersion("2.0")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV2(
+    public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV2Async(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
         int pageSize = 5)
@@ -109,7 +109,7 @@ public class CoursesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType<CourseWithDepartmentRead>(StatusCodes.Status200OK)]
-    public async Task<ActionResult<CourseWithDepartmentRead>> GetCourseWithDepartment(int id)
+    public async Task<ActionResult<CourseWithDepartmentRead>> GetCourseWithDepartmentAsync(int id)
     {
         var course = await _context.Courses.FindAsync(id);
 
@@ -138,7 +138,7 @@ public class CoursesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesDefaultResponseType]
-    public async Task<IActionResult> PutCourse(int id, CourseUpdate course)
+    public async Task<IActionResult> PutCourseAsync(int id, CourseUpdate course)
     {
         if (id != course.CourseId)
         {
@@ -187,7 +187,7 @@ public class CoursesController : ControllerBase
     [HttpPost(Name = "PostCourseAsync")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType<CourseCreate>(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<CourseCreate>> PostCourse(CourseCreate courseToCreate)
+    public async Task<ActionResult<CourseCreate>> PostCourseAsync(CourseCreate courseToCreate)
     {
         var course = new Course
         {
@@ -198,7 +198,7 @@ public class CoursesController : ControllerBase
         _context.Courses.Add(course);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetCourse", new { id = course.CourseId }, new CourseCreate
+        return CreatedAtRoute(nameof(PostCourseAsync), new { id = course.CourseId }, new CourseCreate
         {
             CourseId = course.CourseId,
             Credits = course.Credits,
@@ -211,7 +211,7 @@ public class CoursesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesDefaultResponseType]
-    public async Task<IActionResult> DeleteCourse(int id)
+    public async Task<IActionResult> DeleteCourseAsync(int id)
     {
         var course = await _context.Courses.FindAsync(id);
         if (course == null)
@@ -228,7 +228,7 @@ public class CoursesController : ControllerBase
     [HttpPost("BatchUpdateCredits", Name = "PostBatchUpdateCreditsAsync")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesDefaultResponseType]
-    public async Task<IActionResult> PostBatchUpdateCredits()
+    public async Task<IActionResult> PostBatchUpdateCreditsAsync()
     {
         await _context.Courses.ExecuteUpdateAsync(setter => 
             setter.SetProperty(c => c.Credits, c => c.Credits + 1));
