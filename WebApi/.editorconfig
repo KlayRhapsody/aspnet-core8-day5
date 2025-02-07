@@ -1,0 +1,18 @@
+# 根據您專案的需求，請確保這段會套用到 C# 檔案
+[*.cs]
+
+# 命名規則：private_field_underscore_rule
+dotnet_naming_rule.private_field_underscore_rule.symbols = private_fields
+dotnet_naming_rule.private_field_underscore_rule.style = underscore_style
+dotnet_naming_rule.private_field_underscore_rule.severity = suggestion
+
+# 定義要對哪些符號種類 (symbols) 套用這個規則
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers = 
+
+# 定義實際的風格: 要求前面帶底線，Camel Case
+dotnet_naming_style.underscore_style.required_prefix = _
+dotnet_naming_style.underscore_style.required_suffix =
+dotnet_naming_style.underscore_style.capitalization = camel_case
+dotnet_naming_style.underscore_style.word_separator =
