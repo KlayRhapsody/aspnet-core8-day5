@@ -1,8 +1,9 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "WebApi | v2",
-    "version": "1.0.0"
+    "title": "Contoso University API",
+    "description": "API for processing Contoso University data",
+    "version": "v2"
   },
   "servers": [
     {
@@ -10,11 +11,13 @@
     }
   ],
   "paths": {
-    "/api/Courses": {
+    "/api/v2/Courses": {
       "get": {
         "tags": [
           "Courses"
         ],
+        "summary": "取得課程列表",
+        "description": "以分頁的方式取得課程列表，預設每頁 5 筆",
         "operationId": "GetCoursesV2Async",
         "parameters": [
           {
@@ -35,21 +38,6 @@
               "type": "integer",
               "format": "int32",
               "default": 5
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -81,23 +69,6 @@
           "Courses"
         ],
         "operationId": "PostCourseAsync",
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -162,7 +133,7 @@
         }
       }
     },
-    "/api/Courses/{id}": {
+    "/api/v2/Courses/{id}": {
       "get": {
         "tags": [
           "Courses"
@@ -176,21 +147,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -250,21 +206,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -368,21 +309,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -432,7 +358,7 @@
         }
       }
     },
-    "/api/Courses/{id}/Depart": {
+    "/api/v2/Courses/{id}/Depart": {
       "get": {
         "tags": [
           "Courses"
@@ -446,21 +372,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -508,29 +419,12 @@
         }
       }
     },
-    "/api/Courses/BatchUpdateCredits": {
+    "/api/v2/Courses/BatchUpdateCredits": {
       "post": {
         "tags": [
           "Courses"
         ],
         "operationId": "PostBatchUpdateCreditsAsync",
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "204": {
             "description": "No Content"

@@ -10,7 +10,11 @@
     <PackageReference Include="NSwag.ApiDescription.Client" Version="13.0.5" />
   </ItemGroup>
   <ItemGroup>
-    <OpenApiReference Include="v2.json" SourceUrl="http://localhost:5268/openapi/v2.json">
+    <!-- <OpenApiReference Include="v2.json" SourceUrl="http://localhost:5268/openapi/v2.json">
+      <ClassName>WebApi</ClassName>
+      <Options>/GenerateClientInterfaces:true</Options>
+    </OpenApiReference> -->
+    <OpenApiReference Include="v1.json" SourceUrl="http://localhost:5268/openapi/v1.json">
       <ClassName>WebApi</ClassName>
       <Options>/GenerateClientInterfaces:true</Options>
     </OpenApiReference>

@@ -1,12 +1,10 @@
-using Asp.Versioning;
-
 namespace WebApi.Controllers;
 
+[ApiVersion("1")]
+[ApiVersion("2")]
 [ApiController]
-// [Route("api/v{version:apiVersion}/[controller]")]
-[Route("api/[controller]")]
-[ApiVersion("1.0")]
-[ApiVersion("2.0")]
+[Route("api/v{apiVersion:apiVersion}/[controller]")]
+// [Route("api/[controller]")]
 public class CoursesController : ControllerBase
 {
     private readonly ContosoUniversityContext _context;
@@ -16,10 +14,12 @@ public class CoursesController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Courses
+    // GET: api/v1/Courses
+    [MapToApiVersion("1")]
     [HttpGet(Name = "GetCoursesV1Async")]
-    [MapToApiVersion("1.0")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
+    [EndpointSummary("取得課程列表")]
+    [EndpointDescription("以分頁的方式取得課程列表，預設每頁 10 筆")]
     public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV1Async(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 
@@ -49,10 +49,12 @@ public class CoursesController : ControllerBase
         });
     }
 
-    // GET: api/Courses
+    // GET: api/v2/Courses
+    [MapToApiVersion("2")]
     [HttpGet(Name = "GetCoursesV2Async")]
-    [MapToApiVersion("2.0")]
     [ProducesResponseType<PageCourse>(StatusCodes.Status200OK)]
+    [EndpointSummary("取得課程列表")]
+    [EndpointDescription("以分頁的方式取得課程列表，預設每頁 5 筆")]
     public async Task<ActionResult<IEnumerable<PageCourse>>> GetCoursesV2Async(
         [Range(1, int.MaxValue, ErrorMessage = "pageIndex 不能小於 1")] 
         int pageIndex = 1, 

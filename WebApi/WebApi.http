@@ -1,28 +1,24 @@
 @WebApi_HostAddress = http://localhost:5268
 
-GET {{WebApi_HostAddress}}/weatherforecast/
-Accept: application/json
-
 ###
 
-GET {{WebApi_HostAddress}}/api/courses
+GET {{WebApi_HostAddress}}/api/v2/courses
 Accept: application/json
-api-version: 2.0
 
 
 ###
 
-GET {{WebApi_HostAddress}}/api/courses?pageIndex=1&pageSize=5
+GET {{WebApi_HostAddress}}/api/v1/courses?pageIndex=1&pageSize=5
 Accept: application/json
 
 ###
 
-GET {{WebApi_HostAddress}}/api/courses/1
+GET {{WebApi_HostAddress}}/api/v2/courses/1
 Accept: application/json
 
 ###
 
-PUT {{WebApi_HostAddress}}/api/courses/1
+PUT {{WebApi_HostAddress}}/api/v2/courses/1
 Accept: application/json
 Content-Type: application/json
 
@@ -34,7 +30,7 @@ Content-Type: application/json
 
 ###
 
-POST {{WebApi_HostAddress}}/api/courses
+POST {{WebApi_HostAddress}}/api/v1/courses
 Accept: application/json
 Content-Type: application/json
 
@@ -46,17 +42,17 @@ Content-Type: application/json
 
 ###
 
-DELETE  {{WebApi_HostAddress}}/api/courses/19
+DELETE  {{WebApi_HostAddress}}/api/v1/courses/19
 Accept: application/json
 
 
 ###
 
-GET {{WebApi_HostAddress}}/api/Courses/5/Depart
+GET {{WebApi_HostAddress}}/api/v1/Courses/5/Depart
 Accept: application/json
 
 
 ###
 
-POST {{WebApi_HostAddress}}/api/Courses/BatchUpdateCredits
+POST {{WebApi_HostAddress}}/api/v1/Courses/BatchUpdateCredits
 Accept: application/json

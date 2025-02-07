@@ -1,8 +1,9 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "WebApi | v1",
-    "version": "1.0.0"
+    "title": "Contoso University API",
+    "description": "API for processing Contoso University data",
+    "version": "v1"
   },
   "servers": [
     {
@@ -10,11 +11,13 @@
     }
   ],
   "paths": {
-    "/api/Courses": {
+    "/api/v1/Courses": {
       "get": {
         "tags": [
           "Courses"
         ],
+        "summary": "取得課程列表",
+        "description": "以分頁的方式取得課程列表，預設每頁 10 筆",
         "operationId": "GetCoursesV1Async",
         "parameters": [
           {
@@ -35,20 +38,6 @@
               "type": "integer",
               "format": "int32",
               "default": 10
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -80,22 +69,6 @@
           "Courses"
         ],
         "operationId": "PostCourseAsync",
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -160,7 +133,7 @@
         }
       }
     },
-    "/api/Courses/{id}": {
+    "/api/v1/Courses/{id}": {
       "get": {
         "tags": [
           "Courses"
@@ -174,20 +147,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -247,20 +206,6 @@
             "schema": {
               "type": "integer",
               "format": "int32"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
             }
           }
         ],
@@ -364,20 +309,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -427,7 +358,7 @@
         }
       }
     },
-    "/api/Courses/{id}/Depart": {
+    "/api/v1/Courses/{id}/Depart": {
       "get": {
         "tags": [
           "Courses"
@@ -442,20 +373,6 @@
               "type": "integer",
               "format": "int32"
             }
-          },
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
           }
         ],
         "responses": {
@@ -502,28 +419,12 @@
         }
       }
     },
-    "/api/Courses/BatchUpdateCredits": {
+    "/api/v1/Courses/BatchUpdateCredits": {
       "post": {
         "tags": [
           "Courses"
         ],
         "operationId": "PostBatchUpdateCreditsAsync",
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "204": {
             "description": "No Content"
@@ -544,61 +445,6 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/WeatherForecast": {
-      "get": {
-        "tags": [
-          "WeatherForecast"
-        ],
-        "operationId": "GetWeatherForecast",
-        "parameters": [
-          {
-            "name": "api-version",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "api-version",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WeatherForecast"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WeatherForecast"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/WeatherForecast"
-                  }
                 }
               }
             }
@@ -737,36 +583,12 @@
             "nullable": true
           }
         }
-      },
-      "WeatherForecast": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "format": "date"
-          },
-          "temperatureC": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "temperatureF": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "summary": {
-            "type": "string",
-            "nullable": true
-          }
-        }
       }
     }
   },
   "tags": [
     {
       "name": "Courses"
-    },
-    {
-      "name": "WeatherForecast"
     }
   ]
 }

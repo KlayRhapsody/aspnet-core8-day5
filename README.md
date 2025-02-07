@@ -120,32 +120,19 @@ dotnet openapi refresh -p {Client Project}.csproj http://localhost:{Port}/swagge
 解決方式，於請求參數型別和回應型別使用 DTO 替代實體物件
 
 
-### **當公司規定無法使用 `Post` 以外的動詞時，透過 `:update` 等方式來取代**
-
-這種用法通常被稱為「動詞後綴」或「動詞後綴模式」。這種模式在 RESTful API 設計中使用，以便在僅允許使用 POST 方法的情況下，仍能夠表達不同的操作（例如更新、刪除等）。
-
-```bash
-PUT {{HostDomain}}/api/courses/1
-
-# 調整為
-POST {{HostDomain}}/api/courses/1:Update
-```
-
-
-### **安不安全與 HTTP 動詞無關，動詞只是讓語意更清楚**
-
-開發者沒有資安意思才不安全
-
-早期有個 WebDAV 是一種基於 HTTP 協議的工具，可以用來新增、刪除、修改伺服器端的資料。IIS（Internet Information Services）曾經內建並預設啟用 WebDAV 功能，這確實可能會帶來安全風險，因為駭客可以利用這個功能來植入檔案。然而，HTTP 動詞本身並不是危險的，危險的是未經適當保護和配置的 WebDAV 功能。正確的安全配置和權限管理可以有效防止這類攻擊。
-
-
 ### **以版本切分路由**
 
 安裝 NuGet 套件
 
 ```bash
-# Microsoft.AspNetCore.Mvc.Versioning、Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer 套件為舊版
+# Microsoft.AspNetCore.Mvc.Versioning
+# Microsoft.AspNetCore.Mvc.Versioning.ApiExplorer
+# 以上套件為舊版已棄用
+
 dotnet add package Asp.Versioning.Http
+# 若使用 Controller 則需安裝該套件 (Minimal API 不需要)
+dotnet add package Asp.Versioning.Mvc
+# Supper for Swagger
 dotnet add package Asp.Versioning.Mvc.ApiExplorer
 ```
 
@@ -160,7 +147,7 @@ builder.Services.AddApiVersioning(option =>
     option.AssumeDefaultVersionWhenUnspecified = true;
     // 在回應中報告支援的 API 版本
     option.ReportApiVersions = true;
-    // 設定 API 版本讀取器，並使用 Combine 方法來結合多個版本讀取器
+    // 設定 API 版本讀取器，可使用 Combine 方法來結合多個版本讀取器
     // 使用 HTTP 標頭來讀取 API 版本
     // 使用查詢字串來讀取 API 版本
     // 使用 URL 段來讀取 API 版本
@@ -178,14 +165,13 @@ builder.Services.AddApiVersioning(option =>
 });
 ```
 
-使用版本控制
+使用版本控制，以下為兩個相同的 API 但版本不同，並在各自 Action 上指定對應的版本號碼
 
 ```csharp
-[ApiController]
-// [Route("api/v{version:apiVersion}/[controller]")] // 此為 URL 包含版本號碼
-[Route("api/[controller]")]
 [ApiVersion("1")]
 [ApiVersion("2")]
+[ApiController]
+[Route("api/v{apiVersion:apiVersion}/[controller]")] // 此為 URL 包含版本號碼
 public class CoursesController : ControllerBase
 {
     // GET: api/Courses
@@ -197,28 +183,7 @@ public class CoursesController : ControllerBase
         int pageIndex = 1, 
         int pageSize = 10)
     {
-        var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
-
-        var totalRecords = await courses.CountAsync();
-
-        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-
-        var pagedCourses = await courses
-            .Select(c => new CourseRead
-            {
-                CourseId = c.CourseId,
-                Credits = c.Credits,
-                Title = c.Title!
-            })
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize).ToListAsync();
-        
-        return Ok(new PageCourse
-        {
-            TotalPages = totalPages,
-            TotalRecords = totalRecords,
-            Data = pagedCourses
-        });
+        // ...
     }
 
     // GET: api/Courses
@@ -230,37 +195,96 @@ public class CoursesController : ControllerBase
         int pageIndex = 1, 
         int pageSize = 5)
     {
-        var courses = _context.Courses.OrderBy(c => c.CourseId).AsQueryable();
-
-        var totalRecords = await courses.CountAsync();
-
-        var totalPages = (int)Math.Ceiling(totalRecords / (double)pageSize);
-
-        var pagedCourses = await courses
-            .Select(c => new CourseRead
-            {
-                CourseId = c.CourseId,
-                Credits = c.Credits,
-                Title = c.Title!
-            })
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize).ToListAsync();
-        
-        return Ok(new PageCourse
-        {
-            TotalPages = totalPages,
-            TotalRecords = totalRecords,
-            Data = pagedCourses
-        });
+        // ...
     }
 }
+```
+
+若想在 Swagger UI 上針對對應的版本內容產生文件，則需要以下設定
+
+透過 `DescribeApiVersions` 方法取得支援的版本號碼，並透過 `SwaggerEndpoint` 方法來設定 Swagger UI 的路由
+
+支援的版本號會由 Controller 上的 `ApiVersion` 屬性來取得
+
+```csharp
+app.UseSwaggerUI(options =>
+{
+    IReadOnlyList<ApiVersionDescription> descriptions = app.DescribeApiVersions();
+
+    foreach (var description in descriptions)
+    {
+        string url = $"/openapi/{description.GroupName}.json";
+        string name = description.GroupName.ToUpperInvariant();
+        options.SwaggerEndpoint(url, name);
+    }
+});
+```
+
+若為 .NET 9 以前的版本可以自行實作 `IConfigureNamedOptions<SwaggerGenOptions>` 來自定義文檔描述
+
+```csharp
+public class ConfigureSwaggerGenOptions : IConfigureNamedOptions<SwaggerGenOptions>
+{
+    private readonly IApiVersionDescriptionProvider _provider;
+
+    public ConfigureSwaggerGenOptions(IApiVersionDescriptionProvider provider)
+    {
+        _provider = provider;
+    }
+
+    public void Configure(string? name, SwaggerGenOptions options)
+    {
+        Configure(options);
+    }
+
+    public void Configure(SwaggerGenOptions options)
+    {
+        foreach (var description in _provider.ApiVersionDescriptions)
+        {
+            var openApiInfo = new OpenApiInfo
+            {
+                Title = $"WebApi v{description.ApiVersion}",
+                Version = description.ApiVersion.ToString()
+            };
+
+            options.SwaggerDoc(description.GroupName, openApiInfo);
+        }
+    }
+}
+```
+
+若為 .NET 9 版本並使用了預設的 OpenAPI 文件則是在 `AddOpenApi()` 方法中透過 `AddDocumentTransformer` 來自定義文檔描述
+
+```csharp
+builder.Services.AddOpenApi("v1", option =>
+{
+    option.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info = new()
+        {
+            Title = "Contoso University API",
+            Version = "v1",
+            Description = "API for processing Contoso University data",
+        };
+
+        return Task.CompletedTask;
+    });
+    option.AddDocumentTransformer(new CustomDocumentTransformer(option.DocumentName));
+});
+```
+
+若為 .NET 9 版本並使用了預設的 OpenAPI 文件且有多份文件時需將各文件名稱加入 OpenAPI 文件中
+
+```csharp
+builder.Services.AddOpenApi("v1");
+builder.Services.AddOpenApi("v2");
 ```
 
 呼叫 API 時，可以透過 URL 段來指定版本號碼
 
 ```bash
-# 不指定版本號碼則吃預設版本
-GET {{WebApi_HostAddress}}/api/courses
+# 透過 URL 來指定版本號碼
+GET {{WebApi_HostAddress}}/api/v1/courses
 Accept: application/json
 
 # 透過 Header 標頭來指定版本號碼
@@ -281,6 +305,26 @@ Server: Kestrel
 Transfer-Encoding: chunked
 api-supported-versions: 1, 2
 ```
+
+
+### **當公司規定無法使用 `Post` 以外的動詞時，透過 `:update` 等方式來取代**
+
+這種用法通常被稱為「動詞後綴」或「動詞後綴模式」。這種模式在 RESTful API 設計中使用，以便在僅允許使用 POST 方法的情況下，仍能夠表達不同的操作（例如更新、刪除等）。
+
+```bash
+PUT {{HostDomain}}/api/courses/1
+
+# 調整為
+POST {{HostDomain}}/api/courses/1:Update
+```
+
+
+### **安不安全與 HTTP 動詞無關，動詞只是讓語意更清楚**
+
+開發者沒有資安意思才不安全
+
+早期有個 WebDAV 是一種基於 HTTP 協議的工具，可以用來新增、刪除、修改伺服器端的資料。IIS（Internet Information Services）曾經內建並預設啟用 WebDAV 功能，這確實可能會帶來安全風險，因為駭客可以利用這個功能來植入檔案。然而，HTTP 動詞本身並不是危險的，危險的是未經適當保護和配置的 WebDAV 功能。正確的安全配置和權限管理可以有效防止這類攻擊。
+
 
 ### **`CreatedAtRoute` vs. `CreatedAtAction`**
 
@@ -525,3 +569,40 @@ public class CourseCreate : IValidatableObject
 }
 ```
 
+
+### **Action Filter**
+
+Action Filter 為終端框架的一部分，用於在執行 Action 之前或之後執行程式碼。Action Filter 通常用於執行共用的功能，例如驗證輸入、記錄請求、檢查權限等。
+
+Action Filter 有四種類型：
+
+- Authorization Filter：在執行 Action 之前執行，用於驗證請求。
+- Resource Filter：在執行 Action 之前和之後執行，用於執行共用的功能。
+- Action Filter：在執行 Action 之前和之後執行，用於執行共用的功能。
+- Exception Filter：在發生例外時執行，用於處理例外。
+
+以下是一個簡單的 Action Filter 範例
+
+```csharp
+public class XXXXAttribute: ActionFilterAttribute
+{
+    public override void OnActionExecuting(ActionExecutingContext context)
+    {
+        // 在執行 Action 之前執行   
+    }
+
+    public override void OnActionExecuted(ActionExecutedContext context)
+    {
+        // 在執行 Action 之後執行
+    }
+}
+```
+
+全域註冊，所有 Controller 都會套用
+
+```csharp
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<XXXXAttribute>();
+});
+```
