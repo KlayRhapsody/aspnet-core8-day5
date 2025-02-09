@@ -606,3 +606,110 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<XXXXAttribute>();
 });
 ```
+
+
+### **`/Error` 錯誤處理**
+
+透過 `UseExceptionHandler` 中介軟體來處理例外狀況
+
+```csharp
+app.UseExceptionHandler("/Error");
+```
+
+新增 `ErrorController` 來處理例外狀況
+
+需設定 `ApiExplorerSettings` 屬性，讓 Swagger UI 可以正確顯示
+
+透過 `Problem` 遵循 RFC 7807 (Update RFC 9457) 標準，回應錯誤訊息
+
+這裡取到的 `HttpContext.Request.Path` 會是 `/Error`，而不是原本的路由
+
+```csharp
+[Route("[controller]")]
+public class ErrorController : ControllerBase
+{
+    [ApiExplorerSettings(IgnoreApi = true)]
+    public IActionResult Error()
+    {
+        var context = HttpContext.Features.Get<IExceptionHandlerFeature>();
+        var exception = context.Error;
+
+        return Problem(
+            detail: exception.StackTrace,
+            title: exception.Message,
+            statusCode: StatusCodes.Status500InternalServerError
+        );
+    }
+}
+```
+
+
+### **實作 `IExceptionFilter` 介面的錯誤處理**
+
+透過實作 `IExceptionFilter` 介面來自訂全域錯誤處理
+
+```csharp
+internal sealed class GlobalExceptionHandler : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext, 
+        Exception exception, 
+        CancellationToken cancellationToken)
+    {
+        // 若回傳 true 表示已處理例外，不會再往下傳遞
+        // 若回傳 false 表示未處理例外，會繼續往下傳遞
+        return true;
+    }
+}
+```
+
+註冊全域錯誤處理，需帶入 Delegate 但不需要實作
+
+```csharp
+app.UseExceptionHandler(o => {});
+```
+
+可搭配 `IProblemDetailsService` 介面來標準化錯誤回應的服務
+
+它的目標是提供一個簡單的方式來返回 RFC 7807 標準格式的 ProblemDetails，用於 HTTP API 錯誤回應。
+
+```csharp
+internal sealed class GlobalExceptionHandler(IProblemDetailsService problemDetailsService) : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext, 
+        Exception exception, 
+        CancellationToken cancellationToken)
+    {
+
+        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            Exception = exception,
+            ProblemDetails = new ProblemDetails
+            {
+                Title = "error",
+                Detail = "An unexpected error occurred.",
+                Status = StatusCodes.Status500InternalServerError,
+                Type = "https://tools.ietf.org/html/rfc7807#section-3.1"
+            }
+        });
+    }
+}
+```
+
+### **透過註冊 AddProblemDetails 服務來自訂全域錯誤回應屬性**
+
+```csharp
+builder.Services.AddProblemDetails(option =>
+{
+    option.CustomizeProblemDetails = (context) =>
+    {
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+        
+        var activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
+        context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
+    };
+});
+```

@@ -1,4 +1,19 @@
+using Microsoft.AspNetCore.Http.Features;
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails(option =>
+{
+    option.CustomizeProblemDetails = (context) =>
+    {
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+        
+        var activity = context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity;
+        context.ProblemDetails.Extensions.TryAdd("traceId", activity?.Id);
+    };
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Add services to the container.
 builder.Services.AddControllers(option =>
@@ -42,7 +57,7 @@ builder.Services.AddDbContext<ContosoUniversityContext>(
 
 var app = builder.Build();
 
-app.UseExceptionHandler("/Error");
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -60,6 +75,8 @@ if (app.Environment.IsDevelopment())
         }
     });
 }
+
+// app.UseStatusCodePages();
 
 app.UseHttpsRedirection();
 

@@ -26,7 +26,6 @@ public class ErrorController : ControllerBase
         if (context == null)
         {
             return Problem(
-                type: "tag:example@example.org,2021-09-17:OutOfLuck",
                 title: "Unexpected Error",
                 detail: "An unexpected error occurred.",
                 statusCode: StatusCodes.Status500InternalServerError
@@ -34,27 +33,26 @@ public class ErrorController : ControllerBase
         }
 
         var exception = context.Error;
-        var traceId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-        
+        var requestId = HttpContext.TraceIdentifier;
         var statusCode = GetStatusCode(exception);
-        var httpMethod = HttpContext.Request.Method;
-        var httpPath = HttpContext.Request.Path;
 
-        // 加入 狀態碼 與 追蹤識別碼 與 Http Method 與 Http Path 到日誌
+        // 加入 狀態碼 與 追蹤識別碼到日誌
         _logger.LogError(exception, 
-            "An unexpected error occurred. StatusCode: {StatusCode} TraceId: {TraceId} HttpMethod: {HttpMethod} HttpPath: {HttpPath}", 
-            statusCode, traceId, httpMethod, httpPath);
+            "An unexpected error occurred. StatusCode: {StatusCode} RequestId: {RequestId}", 
+            statusCode, requestId);
 
         var problemDetails = new ProblemDetails
         {
             Type = $"https://httpstatuses.com/{statusCode}",
             Title = GetErrorTitle(statusCode),
             Status = statusCode,
-            Instance = httpPath,
             Detail = _env.IsDevelopment() ? exception.Message : "An unexpected error occurred.",
+            Extensions =
+            {
+                ["requestId"] = requestId,
+                ["traceId"] = Activity.Current?.Id
+            }
         };
-
-        problemDetails.Extensions.Add("traceId", traceId);
 
         return new ObjectResult(problemDetails)
         {
