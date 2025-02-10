@@ -713,3 +713,32 @@ builder.Services.AddProblemDetails(option =>
     };
 });
 ```
+
+
+### **CORS**
+
+不同源的請求在瀏覽器會被擋下，可以透過跨域來源存取來解決此問題
+
+不同源條件
+
+* 主機名稱不同
+* 協定不同
+* 埠號不同
+
+```csharp
+builder.Services.AddCors(option =>
+{
+    option.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3001")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+```
+
+註冊 Middleware
+
+```csharp
+app.UseCors();
+```

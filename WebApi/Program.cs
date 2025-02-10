@@ -2,6 +2,17 @@ using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(option =>
+{
+    option.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "https://localhost:3001")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+            // .AllowAnyOrigin();
+    });
+});
+
 builder.Services.AddProblemDetails(option =>
 {
     option.CustomizeProblemDetails = (context) =>
@@ -58,6 +69,8 @@ builder.Services.AddDbContext<ContosoUniversityContext>(
 var app = builder.Build();
 
 app.UseExceptionHandler();
+
+app.UseCors();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
