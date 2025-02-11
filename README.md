@@ -742,3 +742,69 @@ builder.Services.AddCors(option =>
 ```csharp
 app.UseCors();
 ```
+
+
+### **新增 Json Web Token (JWT) 驗證機制**
+
+產生合法有效的 JWT Token
+
+機敏資訊不應該放在 JWT Token 中，因為 JWT Token 是可以被解碼的
+
+```csharp
+SecurityTokenDescriptor descriptor = new ()
+{
+    Subject = new ClaimsIdentity(
+    [
+        // 使用者 ID 或唯一識別碼
+        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+        // 可讀的使用者名稱
+        new Claim(JwtRegisteredClaimNames.Name, user.Id),
+        new Claim(JwtRegisteredClaimNames.Email, user.Email),
+        //  JWT Token 的唯一識別碼，通常用來防止重放攻擊 (Replay Attack) 或 Token 追蹤
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        new Claim("email_verified", user.EmailVerified.ToString()),
+    ]),
+    Expires = DateTime.UtcNow.AddMinutes(config.GetValue<int>("Jwt:ExpirationInMinutes")),
+    SigningCredentials = credentials,
+    Issuer = config["Jwt:Issuer"],
+    Audience = config["Jwt:Audience"]
+};
+```
+
+驗證合法有效的 JWT Token
+
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+  .AddJwtBearer(options =>
+  {
+      // 僅開發環境適用
+      options.RequireHttpsMetadata = false;
+      options.TokenValidationParameters = new TokenValidationParameters()
+      {
+          IssuerSigningKey = new SymmetricSecurityKey(
+              Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])),
+          ValidIssuer = builder.Configuration["Jwt:Issuer"],
+          ValidAudience = builder.Configuration["Jwt:Audience"],
+          ClockSkew = TimeSpan.Zero
+      };
+  });
+```
+
+限制特定 API 只能在通過 JWT 驗證的 HTTP 要求才能存取
+
+預設 Open API 與 Swagger 註冊方式不同，需透過 `AddDocumentTransformer` 來自定義文檔描述
+
+```csharp
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});
+```
+
+在 Swagger UI 中啟用 JWT 驗證，並將它套用到 /XXX 路徑的所有 API 操作中
+
+* 定義 JWT 驗證的 OpenAPI 安全性方案 (OpenApiSecurityScheme)
+* 將 JWT 安全性方案加入 Swagger Components.SecuritySchemes
+* 將 JWT 驗證需求應用到 /api/users 下的所有 API 操作
+
+加上 [Authorize] 屬性的 Controller 或 Action 會被身份驗證 (Authentication) 限制，如果沒有 [Authorize]，那麼該 API 會允許所有人存取

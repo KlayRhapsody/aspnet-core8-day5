@@ -1,10 +1,14 @@
-using Microsoft.AspNetCore.Http.Features;
+
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using WebApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(option =>
+builder.Services.AddCors(options =>
 {
-    option.AddDefaultPolicy(policy =>
+    options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins("http://localhost:3000", "https://localhost:3001")
             .AllowAnyHeader()
@@ -13,9 +17,9 @@ builder.Services.AddCors(option =>
     });
 });
 
-builder.Services.AddProblemDetails(option =>
+builder.Services.AddProblemDetails(options =>
 {
-    option.CustomizeProblemDetails = (context) =>
+    options.CustomizeProblemDetails = (context) =>
     {
         context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
         context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
@@ -26,45 +30,67 @@ builder.Services.AddProblemDetails(option =>
 });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-// Add services to the container.
-builder.Services.AddControllers(option =>
+builder.Services.AddControllers(options =>
 {
-    option.Filters.Add<RecordExectionTimeAttribute>();
+    options.Filters.Add<RecordExectionTimeAttribute>();
 });
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi("v1", option =>
+builder.Services.AddOpenApi("v1", options =>
 {
-    option.AddDocumentTransformer(new CustomDocumentTransformer(option.DocumentName));
+    options.AddDocumentTransformer(new CustomDocumentTransformer(options.DocumentName));
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
-builder.Services.AddOpenApi("v2", option =>
+builder.Services.AddOpenApi("v2", options =>
 {
-    option.AddDocumentTransformer(new CustomDocumentTransformer(option.DocumentName));
+    options.AddDocumentTransformer(new CustomDocumentTransformer(options.DocumentName));
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
-builder.Services.AddApiVersioning(option =>
+builder.Services.AddApiVersioning(options =>
 {
-    option.DefaultApiVersion = new ApiVersion(1, 0);
-    option.AssumeDefaultVersionWhenUnspecified = true;
-    option.ReportApiVersions = true;
-    // option.ApiVersionReader = new UrlSegmentApiVersionReader();
-    option.ApiVersionReader = ApiVersionReader.Combine(
-        new HeaderApiVersionReader("X-ApiVersion"),
-        new QueryStringApiVersionReader("api-version"),
-        new UrlSegmentApiVersionReader());
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new UrlSegmentApiVersionReader();
+    // option.ApiVersionReader = ApiVersionReader.Combine(
+    //     new HeaderApiVersionReader("X-ApiVersion"),
+    //     new QueryStringApiVersionReader("api-version"),
+    //     new UrlSegmentApiVersionReader());
 })
-.AddMvc()
-.AddApiExplorer(option =>
-{
-    option.GroupNameFormat = "'v'V";
-    option.SubstituteApiVersionInUrl = true;
-});
+    .AddMvc()
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'V";
+        options.SubstituteApiVersionInUrl = true;
+    });
 // builder.Services.ConfigureOptions<ConfigureSwaggerGenOptions>();
 
 builder.Services.AddDbContext<ContosoUniversityContext>(
         options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddSingleton<TokenProvider>();
+
+builder.Services.AddAuthorization();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // 僅開發環境適用
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters()
+        {
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"])),
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+// builder.Services.AddSwaggerGenWithAuth();
 
 var app = builder.Build();
 
@@ -92,6 +118,8 @@ if (app.Environment.IsDevelopment())
 // app.UseStatusCodePages();
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 
